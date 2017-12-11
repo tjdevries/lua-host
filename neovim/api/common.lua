@@ -49,20 +49,38 @@ end
 -- Base  class for Neovim objects (buffer/window/tabpage).
 local Remote = {}
 Remote.init = function(self, session, code_data)
-  self._type = 'Remote'
+  if self._type == nil then
+    self._type = 'Remote'
+  end
 
   self._session = session
   self.code_data = code_data
   self.api = RemoteApi:init(self, self._api_prefix)
   self.vars = RemoteMap:init(self, self._api_prefix .. 'get_var', self._api_prefix .. 'set_var')
   self.options = RemoteMap:init(self, self._api_prefix .. 'get_option', self._api_prefix .. 'get_var')
+
+  return self
 end
 Remote.child = function(config)
   assert(config._type ~= nil)
   assert(config._api_prefix ~= nil)
 
-  config.init = function(self)
-    local new_inst = config
+  config.__index = function(self, key)
+    if type(key) == 'number' then
+      return self:_numeric_index(key)
+    end
+
+    if self._props[key] ~= nil then
+      return self._props[key].get(self)
+    end
+
+    if Remote[key] ~= nil then
+      return Remote[key]
+    end
+  end
+
+  config.init = function(self, session, code_data)
+    local new_inst = Remote.init(self, session, code_data)
     setmetatable(new_inst, self)
     return new_inst
   end

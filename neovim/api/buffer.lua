@@ -1,9 +1,9 @@
-  --- TODO(tjdevries): documentation
+local Remote = require('neovim.api.common').Remote
+--- TODO(tjdevries): documentation
 
 -- Property functions
-local get_name = function(_)
-  return 'BUFFER NAME'
-  -- return self.request('nvim_buf_get_name')
+local get_name = function(self)
+  return self.request('nvim_buf_get_name')
 end
 
 local set_name = function(self, value)
@@ -14,6 +14,10 @@ local Buffer = {
   _type = 'Buffer',
   _api_prefix = 'buf',
 
+  _numeric_index = function(self, idx)
+    return self.request('nvim_buf_get_lines', idx, idx, false)
+  end,
+
   _props = {
     name = {
       get = get_name,
@@ -21,19 +25,10 @@ local Buffer = {
     },
   },
 }
-Buffer = require('neovim.api.common').Remote.child(Buffer)
+Buffer = Remote.child(Buffer)
 
 Buffer.__len = function(self)
   self.request('nvim_buf_line_count')
-end
-Buffer.__index = function(self, idx)
-  if type(idx) == type(1) then
-    return self.request('nvim_buf_get_lines', idx, idx, false)
-  end
-
-  if self._props[idx] ~= nil then
-    return self._props[idx].get(self)
-  end
 end
 Buffer.__newindex = function(self, idx, value)
   self.request('nvim_buf_set_lines', idx, idx, false, { value })
